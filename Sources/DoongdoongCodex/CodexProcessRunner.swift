@@ -25,7 +25,7 @@ final class CodexProcessRunner: @unchecked Sendable {
     }
 
     func run(executable: URL, arguments: [String], directory: URL, log: URL, input: String? = nil, timeout: Double = 7200,
-                    environmentOverrides: [String: String] = [:], removingEnvironmentKeys: [String] = []) async throws {
+                    environmentOverrides: [String: String] = [:], removingEnvironmentKeys: [String] = [], events: URL? = nil) async throws {
         try Task.checkCancellation()
         guard timeout.isFinite, timeout > 0 else { throw CodexError.message("올바른 처리 제한 시간이 필요합니다.") }
         try await withTaskCancellationHandler {
@@ -45,10 +45,15 @@ final class CodexProcessRunner: @unchecked Sendable {
                             throw CodexError.message("처리 로그를 저장하지 못했습니다. 저장 공간과 폴더 권한을 확인해 주세요.")
                         }
                         let handle = try FileHandle(forWritingTo: log)
+                        var eventHandle: FileHandle?
+                        if let events {
+                            guard FileManager.default.createFile(atPath: events.path, contents: nil) else { throw CocoaError(.fileWriteUnknown) }
+                            eventHandle = try FileHandle(forWritingTo: events)
+                        }
                         var inputHandle: FileHandle?
                         var inputURL: URL?
                         defer {
-                            try? handle.close(); try? inputHandle?.close()
+                            try? handle.close(); try? eventHandle?.close(); try? inputHandle?.close()
                             if let inputURL { try? FileManager.default.removeItem(at: inputURL) }
                         }
                         if let input {
@@ -64,7 +69,7 @@ final class CodexProcessRunner: @unchecked Sendable {
                         for key in removingEnvironmentKeys { env.removeValue(forKey: key) }
                         for (key, value) in environmentOverrides { env[key] = value }
                         task.environment = env
-                        task.standardOutput = handle; task.standardError = handle
+                        task.standardOutput = eventHandle ?? handle; task.standardError = handle
                         task.standardInput = inputHandle ?? FileHandle.nullDevice
                         self.lock.lock()
                         if self.cancelled { self.lock.unlock(); throw CancellationError() }
