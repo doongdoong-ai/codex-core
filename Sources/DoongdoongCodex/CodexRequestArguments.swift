@@ -16,7 +16,7 @@ extension CodexTextProvider {
             "features.multi_agent_v2=false", "features.view_image=false", "features.image_generation=false",
             "features.in_app_browser=false", "features.skill_search=false", "features.memories=false"
         ]
-        return ["exec", "--model", selection.rawValue, "--ignore-user-config", "--ignore-rules", "--ephemeral", "--sandbox", "read-only",
+        return ["exec", "--json", "--model", selection.rawValue, "--ignore-user-config", "--ignore-rules", "--ephemeral", "--sandbox", "read-only",
                 "--skip-git-repo-check", "--color", "never", "--output-schema", schema.path,
                 "--output-last-message", response.path]
             + overrides.flatMap { ["-c", $0] } + ["-"]
