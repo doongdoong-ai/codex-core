@@ -14,7 +14,7 @@ Codex CLI를 Swift에서 호출해 JSON 응답을 받는 패키지입니다. 둥
 `Package.swift`의 `dependencies`에 추가합니다.
 
 ```swift
-.package(url: "https://github.com/doongdoong-ai/codex-core.git", from: "0.1.1")
+.package(url: "https://github.com/doongdoong-ai/codex-core.git", from: "0.2.0")
 ```
 
 사용할 타깃의 `dependencies`에도 두 제품을 추가합니다.
@@ -54,6 +54,10 @@ func generate(executable: URL, input: Data, schema: Data) async throws -> Data {
 `catalog.select()`는 해당 추론 강도를 지원하는 모델 중 GPT-6.1 Sol, GPT-6 Luna 순으로 선택합니다. 모델을 고정하려면 `preferred:`를 지정합니다. 목록 조회는 남은 사용량을 확인하지 않으며, 요청 실패 시 모델을 자동 변경하지 않습니다.
 
 프롬프트, 응답 스키마·내용 검증, 재시도는 호출 앱에서 구현합니다. 패키지는 CLI 실행·취소·제한 시간·임시 파일 정리를 담당하며, 입력·출력 용량 초과를 `TextGenerationError.capacityExceeded`로 전달합니다. 다른 공급자는 `DoongdoongAI`의 `TextGenerationProvider`를 구현해 연결할 수 있습니다.
+
+예상 시간은 `provider.estimatedDuration(for: .init(task: .correction, characterCount: count))`로 조회합니다. `.summary`도 지원합니다. 계산은 벤더 구현의 책임이며, 공통 인터페이스에 기본 공식은 없습니다. 반환값은 유한한 양수 초여야 하고 CLI 실행이나 네트워크 요청 없이 계산해야 합니다. 앱은 이 값으로 진행률을 표시하되 실제 응답 검증 후에만 완료 처리합니다.
+
+현재 Codex 공식은 글자 수 기반의 보수적인 추정값이며, 모델·추론 강도별 실측 보정은 아직 없습니다. CI에서 모든 모델·추론 강도·작업 종류와 입력 경계값에 대해 예상 시간이 유효한지 검사합니다. 0.2.0부터 다른 공급자 구현에도 `estimatedDuration(for:)`가 필요합니다.
 
 ## 개발
 
