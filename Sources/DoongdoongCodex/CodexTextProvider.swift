@@ -5,6 +5,9 @@ import DoongdoongAI
 @MainActor public final class CodexTextProvider: TextGenerationProvider {
     public let configuration: CodexConfiguration
     public var identity: TextProviderIdentity { configuration.identity }
+    public func estimatedDuration(for workload: TextGenerationWorkload) -> TimeInterval {
+        CodexDurationEstimate.duration(for: workload)
+    }
     private let temporaryRoot: URL
     private static let removedEnvironment = ["OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_ORG_ID", "OPENAI_PROJECT_ID",
         "CODEX_API_KEY", "AZURE_OPENAI_API_KEY", "ANTHROPIC_API_KEY"]

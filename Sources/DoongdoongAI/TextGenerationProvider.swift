@@ -21,10 +21,25 @@ public struct StructuredTextRequest: Sendable {
     }
 }
 
+/// Work description only. Each vendor owns the estimate and its calibration.
+public struct TextGenerationWorkload: Equatable, Sendable {
+    public enum Task: CaseIterable, Sendable { case correction, summary }
+    public let task: Task
+    public let characterCount: Int
+    public init(task: Task, characterCount: Int) {
+        self.task = task; self.characterCount = characterCount
+    }
+}
+
 /// Implement this boundary for another vendor. Prompts, semantic validation and
-/// lecture progress remain caller-owned; the provider never edits source files.
+/// progress presentation remain caller-owned; duration estimation is provider-owned.
+/// The provider never edits source files.
 @MainActor public protocol TextGenerationProvider {
     var identity: TextProviderIdentity { get }
+    /// Must return finite, positive seconds without I/O or a generation request.
+    /// Use a vendor-owned conservative estimate when calibration is unavailable.
+    /// There is deliberately no default implementation shared by vendors.
+    func estimatedDuration(for workload: TextGenerationWorkload) -> TimeInterval
     func checkConnection() async throws
     func generate(_ request: StructuredTextRequest) async throws -> Data
 }
