@@ -1,5 +1,6 @@
 import Foundation
 import Darwin
+import DoongdoongAI
 
 /// A bounded JSON-RPC connection. Codex owns authentication; no credential files or RPC payloads are logged.
 @MainActor
@@ -175,7 +176,7 @@ final class CodexAccountClient: NSObject {
                 // Reject every other tool, approval, authentication or credential request.
                 let denial: [String: Any] = [
                     "id": id,
-                    "error": ["code": -32601, "message": "This client only reads account and model metadata."]
+                    "error": ["code": -32601, "message": "This client only manages account access and model metadata."]
                 ]
                 let connection = transport
                 let data = try encoded(denial)
@@ -218,14 +219,7 @@ final class CodexAccountClient: NSObject {
     }
 
     private static func serverError(_ error: [String: Any]) -> Error {
-        guard var message = error["message"] as? String, !message.isEmpty else {
-            return ClientError.message("Codex에서 AI 연결를 완료하지 못했습니다.")
-        }
-        // Remote diagnostics may contain request details. Never surface bearer tokens or keys.
-        for pattern in ["(?i)Bearer\\s+[^\\s\\\"']+", "\\bsk-[A-Za-z0-9_-]+", "\\beyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+"] {
-            message = message.replacingOccurrences(of: pattern, with: "[비공개]", options: .regularExpression)
-        }
-        return ClientError.message(String(message.prefix(800)))
+        CodexConnectionErrors.structured(error, stage: .account)
     }
 
     private func fail(_ error: Error, stopTransport: Bool = true) {
@@ -248,7 +242,7 @@ final class CodexAccountClient: NSObject {
     }
 }
 
-private enum ClientError: LocalizedError {
+enum ClientError: LocalizedError {
     case disconnected, timedOut, invalidMessage, messageTooLarge, unexpectedAction
     case message(String)
 

@@ -59,11 +59,12 @@ import DoongdoongAI
         } catch {
             if error is CancellationError || Task.isCancelled { throw CancellationError() }
             if CodexCapacity.exceeded(in: events) { throw TextGenerationError.capacityExceeded }
+            if let issue = CodexConnectionErrors.terminalIssue(in: events) { throw issue }
             throw error
         }
         try Task.checkCancellation()
         let data = try Self.boundedData(at: response, maximumBytes: request.maximumResponseBytes)
-        guard (try? JSONSerialization.jsonObject(with: data)) != nil else { throw CodexError.message("Codex returned invalid JSON") }
+        guard (try? JSONSerialization.jsonObject(with: data)) != nil else { throw ProviderConnectionIssue(.invalidResponse, stage: .probe, retry: .manual) }
         return data
     }
     private static func boundedData(at url: URL, maximumBytes: Int) throws -> Data {
