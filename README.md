@@ -14,7 +14,7 @@ Codex CLI를 Swift에서 호출해 JSON 응답을 받는 패키지입니다. 둥
 `Package.swift`의 `dependencies`에 추가합니다.
 
 ```swift
-.package(url: "https://github.com/doongdoong-ai/codex-core.git", from: "0.2.0")
+.package(url: "https://github.com/doongdoong-ai/codex-core.git", from: "0.3.0")
 ```
 
 사용할 타깃의 `dependencies`에도 두 제품을 추가합니다.
@@ -58,6 +58,16 @@ func generate(executable: URL, input: Data, schema: Data) async throws -> Data {
 예상 시간은 `provider.estimatedDuration(for: .init(task: .correction, characterCount: count))`로 조회합니다. `.summary`도 지원합니다. 계산은 벤더 구현의 책임이며, 공통 인터페이스에 기본 공식은 없습니다. 반환값은 유한한 양수 초여야 하고 CLI 실행이나 네트워크 요청 없이 계산해야 합니다. 앱은 이 값으로 진행률을 표시하되 실제 응답 검증 후에만 완료 처리합니다.
 
 현재 Codex 공식은 글자 수 기반의 보수적인 추정값이며, 모델·추론 강도별 실측 보정은 아직 없습니다. CI에서 모든 모델·추론 강도·작업 종류와 입력 경계값에 대해 예상 시간이 유효한지 검사합니다. 0.2.0부터 다른 공급자 구현에도 `estimatedDuration(for:)`가 필요합니다.
+
+## 연결 확인과 로그인
+
+`CodexConnection(executable:preferredModel:reasoningEffort:).verifyConnection()`은 계정과 모델 목록을 조회한 뒤, 선택한 모델에 짧은 JSON 테스트 요청을 보냅니다. 검증된 응답을 받아야 성공하며, 녹음이나 전사문은 전달하지 않습니다. 테스트 요청에도 계정 사용량이 적용됩니다. 기본 제한 시간은 전체 90초이며 자동 재시도는 하지 않습니다.
+
+연결 확인 계약은 `DoongdoongAI.ProviderConnectionChecking`에 있습니다. 실패는 `ProviderConnectionIssue`로 전달합니다. 설치·로그인·설정·네트워크·서비스·시간 초과·사용 한도·응답 오류를 구분하며, 판정할 근거가 없으면 `unknown`입니다. 취소는 `CancellationError`입니다. 사용 한도 초과 시 관련 재설정 시간이 확인되면 `retryAfter`에 담습니다. 성공은 현재 요청이 가능하다는 뜻이며, 이후 사용량을 보장하지 않습니다.
+
+브라우저 로그인은 `CodexBrowserLogin.signIn(executable:openBrowser:)`으로 시작합니다. 앱은 전달받은 URL을 열고, CLI가 콜백과 인증 정보 저장을 담당합니다. 로그인 완료 후 연결 확인을 다시 실행해야 합니다. 로그인 제한 시간은 기본 180초입니다.
+
+모달·버튼·최초 설정 완료 여부는 앱에서 관리합니다. `diagnosticSummary`는 분류된 상태만 포함하며 계정 정보, 원문 오류, 인증 URL은 포함하지 않습니다.
 
 ## 개발
 

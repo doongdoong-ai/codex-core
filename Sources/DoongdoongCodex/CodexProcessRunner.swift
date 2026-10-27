@@ -82,11 +82,11 @@ final class CodexProcessRunner: @unchecked Sendable {
                             Thread.sleep(forTimeInterval: 0.1)
                         }
                         task.waitUntilExit()
-                        if timedOut { throw CodexError.message("처리 시간이 초과되었습니다. 오디오는 보관되어 있습니다.") }
+                        if timedOut { throw CodexProcessError.timedOut }
                         self.lock.lock(); let wasCancelled = self.cancelled; self.lock.unlock()
                         if wasCancelled { throw CancellationError() }
                         guard task.terminationStatus == 0 else {
-                            throw CodexError.message("Codex process failed (\(task.terminationStatus))")
+                            throw CodexProcessError.exited(Int(task.terminationStatus))
                         }
                         continuation.resume()
                     } catch { continuation.resume(throwing: error) }
@@ -103,5 +103,16 @@ final class CodexProcessRunner: @unchecked Sendable {
             try handle.seek(toOffset: size > 8192 ? size - 8192 : 0)
             return String(decoding: try handle.readToEnd() ?? Data(), as: UTF8.self)
         } catch { return "" }
+    }
+}
+
+/// Typed local process failures, independent of the CLI's untrusted stderr.
+enum CodexProcessError: LocalizedError {
+    case timedOut, exited(Int)
+    var errorDescription: String? {
+        switch self {
+        case .timedOut: return "처리 시간이 초과되었습니다. 다시 시도해 주세요."
+        case .exited: return "Codex 실행이 중단되었습니다. 다시 연결해 주세요."
+        }
     }
 }
